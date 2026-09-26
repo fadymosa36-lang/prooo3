@@ -11,8 +11,8 @@
 <style>
   /* Critical CSS: prevent white flash before main CSS loads */
   html { background: #07070f; }
-  html[data-theme="light"] { background: #f8f7f4; }
-  html[data-theme="light"] body { background: #f8f7f4; }
+  html[data-theme="light"] { background: #F2EFE9; }
+  html[data-theme="light"] body { background: #F2EFE9; }
 </style>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -979,47 +979,49 @@
 .pj-link-a {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   padding: 8px 18px;
-  border: 1px solid var(--bdr);
-  font-family: 'Space Mono', monospace;
-  font-size: .6rem;
-  letter-spacing: .1em;
-  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,.10);
+  font-family: 'Outfit', sans-serif;
+  font-size: .8rem;
+  font-weight: 500;
+  letter-spacing: .01em;
   text-decoration: none;
   cursor: pointer;
-  transition: all .25s;
-  border-radius: 2px;
+  transition: all .25s ease;
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
 }
 .pj-link-gh {
-  color: var(--cream);
+  color: #f4f2ed;
   background: rgba(255,255,255,.04);
 }
 .pj-link-gh:hover {
-  background: rgba(255,255,255,.1);
+  background: rgba(255,255,255,.10);
   border-color: rgba(255,255,255,.3);
   transform: translateY(-2px);
 }
 .pj-link-li {
-  color: #0a66c2;
-  border-color: rgba(10,102,194,.35);
-  background: rgba(10,102,194,.06);
+  color: #60a5fa;
+  border-color: rgba(96,165,250,.25);
+  background: rgba(96,165,250,.06);
 }
 .pj-link-li:hover {
-  background: rgba(10,102,194,.14);
-  border-color: #0a66c2;
+  background: rgba(96,165,250,.15);
+  border-color: #60a5fa;
+  color: #93c5fd;
   transform: translateY(-2px);
 }
 .pj-link-det {
-  color: var(--gold3);
-  border-color: var(--bdr);
-  background: rgba(201,168,76,.06);
+  color: #f0e2c8;
+  border-color: rgba(212,184,134,.25);
+  background: rgba(212,184,134,.06);
 }
 .pj-link-det:hover {
-  background: rgba(201,168,76,.14);
-  border-color: var(--gold);
+  background: rgba(212,184,134,.15);
+  border-color: #d4b886;
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(201,168,76,.15);
+  box-shadow: 0 4px 16px rgba(212,184,134,.20);
 }
 
 /* ── Cert card clickable ── */

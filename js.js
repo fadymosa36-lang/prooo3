@@ -344,162 +344,288 @@ fabTop && fabTop.addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-// ── CANVAS BACKGROUND ──
+// ── ULTRA-LUXURY CONSTELLATION & STAR MESH BACKGROUND ──
 (function () {
   const canvas = document.getElementById('bgCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const GOLD = 'rgba(201,168,76,';
-  let W, H, particles, lines, floatingOrbs;
-  let mouse = { x: 0, y: 0 };
-  document.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+  let W = window.innerWidth;
+  let H = window.innerHeight;
+  let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  let particles = [];
+  let mouse = { x: -9999, y: -9999, targetX: -9999, targetY: -9999, active: false };
+  let scrollY = window.scrollY;
+  let scrollVel = 0;
+  let lastScrollY = window.scrollY;
+
+  // Track window scroll for subtle parallax reaction while staying fixed
+  window.addEventListener('scroll', () => {
+    const currentY = window.scrollY;
+    scrollVel += (currentY - lastScrollY) * 0.12;
+    lastScrollY = currentY;
+    scrollY = currentY;
+  }, { passive: true });
+
+  window.addEventListener('mousemove', e => {
+    mouse.targetX = e.clientX;
+    mouse.targetY = e.clientY;
+    mouse.active = true;
+  });
+
+  window.addEventListener('mouseleave', () => {
+    mouse.active = false;
+    mouse.targetX = -9999;
+    mouse.targetY = -9999;
+  });
 
   function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-    mouse.x = W / 2; mouse.y = H / 2;
-    init();
+    W = window.innerWidth;
+    H = window.innerHeight;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    initParticles();
   }
 
-  class Particle {
-    constructor() { this.reset(true); }
-    reset(rand) {
-      this.x = Math.random() * W; this.y = rand ? Math.random() * H : H + 10;
-      this.r = Math.random() * 1.1 + 0.25;
-      this.vx = (Math.random() - 0.5) * 0.2; this.vy = -(Math.random() * 0.35 + 0.08);
-      this.alpha = Math.random() * 0.45 + 0.08;
-      this.life = Math.random() * 320 + 200; this.age = rand ? Math.random() * this.life : 0;
+  // Node Class: Calm, subtle, elegant starlight
+  class Node {
+    constructor(isInitial = true) {
+      this.reset(isInitial);
     }
+
+    reset(isInitial = false) {
+      this.x = Math.random() * W;
+      this.y = isInitial ? Math.random() * H : (Math.random() > 0.5 ? -15 : H + 15);
+      
+      // Gentle, calm, slow drift (not rushed or distracting)
+      const speed = Math.random() * 0.16 + 0.06;
+      const angle = Math.random() * Math.PI * 2;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+
+      // Color types: Soft Champagne Gold or Subtle Celestial Blue
+      const roll = Math.random();
+      if (roll < 0.78) {
+        this.type = 'gold'; // Soft Champagne
+        this.baseR = Math.random() * 1.0 + 1.1;
+      } else {
+        this.type = 'blue'; // Celestial Blue accent
+        this.baseR = Math.random() * 1.1 + 1.2;
+      }
+
+      // Very few subtle orbital rings (only 1 or 2 across entire canvas)
+      this.hasRing = (Math.random() < 0.05);
+      this.ringRadius = Math.random() * 8 + 16;
+      this.ringPulse = Math.random() * Math.PI * 2;
+      this.ringSpeed = Math.random() * 0.008 + 0.004;
+
+      this.pulse = Math.random() * Math.PI * 2;
+      this.pulseSpeed = Math.random() * 0.012 + 0.006;
+    }
+
     update() {
-      const dx = mouse.x - this.x, dy = mouse.y - this.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 220) { this.vx += dx / dist * 0.005; this.vy += dy / dist * 0.005; }
-      this.vx *= 0.99; this.vy *= 0.99;
-      this.x += this.vx; this.y += this.vy; this.age++;
-      if (this.age > this.life || this.y < -10) this.reset(false);
+      this.x += this.vx;
+      this.y += this.vy;
+
+      this.pulse += this.pulseSpeed;
+      this.ringPulse += this.ringSpeed;
+
+      // Subtle scroll parallax
+      this.y -= scrollVel * 0.08;
+
+      // Gentle interactive mouse attraction
+      if (mouse.active) {
+        const dx = mouse.x - this.x;
+        const dy = mouse.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const maxMouseDist = 140;
+        if (dist < maxMouseDist && dist > 0.1) {
+          const force = (1 - dist / maxMouseDist) * 0.25;
+          this.x += (dx / dist) * force;
+          this.y += (dy / dist) * force;
+        }
+      }
+
+      // Soft wrapping around viewport edges
+      const pad = 30;
+      if (this.x < -pad) this.x = W + pad;
+      if (this.x > W + pad) this.x = -pad;
+      if (this.y < -pad) this.y = H + pad;
+      if (this.y > H + pad) this.y = -pad;
     }
-    draw() {
-      const fade = this.age < 60 ? this.age / 60 : this.age > this.life - 60 ? (this.life - this.age) / 60 : 1;
-      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-      ctx.fillStyle = GOLD + (this.alpha * fade) + ')'; ctx.fill();
+
+    draw(isLight) {
+      const breath = Math.sin(this.pulse) * 0.2 + 0.8;
+      const currentR = this.baseR * breath;
+
+      let coreColor, haloColor, ringColor;
+
+      if (!isLight) {
+        // DARK MODE: Refined Champagne & Subtle Celestial Blue (Calm & Elegant)
+        if (this.type === 'blue') {
+          coreColor = `rgba(140, 185, 255, ${0.65 * breath})`;
+          haloColor = `rgba(80, 130, 240, `;
+          ringColor = `rgba(100, 155, 255, 0.18)`;
+        } else {
+          coreColor = `rgba(240, 215, 175, ${0.7 * breath})`;
+          haloColor = `rgba(220, 185, 130, `;
+          ringColor = `rgba(220, 185, 130, 0.18)`;
+        }
+      } else {
+        // LIGHT MODE
+        if (this.type === 'blue') {
+          coreColor = `rgba(70, 105, 160, ${0.6 * breath})`;
+          haloColor = `rgba(70, 105, 160, `;
+          ringColor = `rgba(70, 105, 160, 0.15)`;
+        } else {
+          coreColor = `rgba(160, 120, 40, ${0.6 * breath})`;
+          haloColor = `rgba(160, 120, 40, `;
+          ringColor = `rgba(160, 120, 40, 0.15)`;
+        }
+      }
+
+      // 1. Soft subtle halo
+      const haloR = currentR * 3.5;
+      const haloGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, haloR);
+      const maxHaloAlpha = (!isLight ? 0.14 : 0.08) * breath;
+      haloGrad.addColorStop(0, haloColor + maxHaloAlpha + ')');
+      haloGrad.addColorStop(0.5, haloColor + (maxHaloAlpha * 0.3) + ')');
+      haloGrad.addColorStop(1, haloColor + '0)');
+
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, haloR, 0, Math.PI * 2);
+      ctx.fillStyle = haloGrad;
+      ctx.fill();
+
+      // 2. Star central point
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, currentR, 0, Math.PI * 2);
+      ctx.fillStyle = coreColor;
+      ctx.fill();
+
+      // 3. Subtle delicate ring (if star has ring)
+      if (this.hasRing) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.ringRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = ringColor;
+        ctx.lineWidth = 0.65;
+        ctx.stroke();
+      }
     }
   }
 
-  class FlowLine {
-    constructor() { this.reset(true); }
-    reset(rand) {
-      this.x = rand ? Math.random() * W : (Math.random() > .5 ? -50 : W + 50);
-      this.y = rand ? Math.random() * H : Math.random() * H;
-      this.len = Math.random() * 120 + 50;
-      this.angle = Math.random() * Math.PI * 2;
-      this.vx = Math.cos(this.angle) * (Math.random() * 0.35 + 0.08);
-      this.vy = Math.sin(this.angle) * (Math.random() * 0.25 + 0.04);
-      this.alpha = Math.random() * 0.07 + 0.02;
-      this.life = Math.random() * 380 + 260; this.age = rand ? Math.random() * this.life : 0;
-      this.curve = (Math.random() - 0.5) * 0.018;
-    }
-    update() {
-      this.angle += this.curve;
-      this.vx = Math.cos(this.angle) * 0.35; this.vy = Math.sin(this.angle) * 0.22;
-      this.x += this.vx; this.y += this.vy; this.age++;
-      if (this.age > this.life || this.x < -200 || this.x > W + 200 || this.y < -200 || this.y > H + 200) this.reset(false);
-    }
-    draw() {
-      const fade = this.age < 80 ? this.age / 80 : this.age > this.life - 80 ? (this.life - this.age) / 80 : 1;
-      const ex = this.x + Math.cos(this.angle) * this.len, ey = this.y + Math.sin(this.angle) * this.len;
-      const grad = ctx.createLinearGradient(this.x, this.y, ex, ey);
-      grad.addColorStop(0, GOLD + '0)'); grad.addColorStop(0.35, GOLD + (this.alpha * fade) + ')');
-      grad.addColorStop(0.65, GOLD + (this.alpha * fade * 0.5) + ')'); grad.addColorStop(1, GOLD + '0)');
-      ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(ex, ey);
-      ctx.strokeStyle = grad; ctx.lineWidth = Math.random() * 0.4 + 0.25; ctx.stroke();
-    }
+  function initParticles() {
+    // Sparse, calm count: ~34 on desktop, ~18 on mobile (not overcrowded)
+    const count = W < 768 ? 18 : 34;
+    particles = Array.from({ length: count }, () => new Node(true));
   }
 
-  class FloatOrb {
-    constructor() {
-      this.x = Math.random() * W; this.y = Math.random() * H;
-      this.r = Math.random() * 160 + 70;
-      this.vx = (Math.random() - .5) * 0.25; this.vy = (Math.random() - .5) * 0.18;
-      this.alpha = Math.random() * 0.055 + 0.015;
-      this.pulse = Math.random() * Math.PI * 2; this.pulseSpeed = Math.random() * 0.007 + 0.003;
-    }
-    update() {
-      this.x += this.vx; this.y += this.vy; this.pulse += this.pulseSpeed;
-      if (this.x < -this.r) this.x = W + this.r; if (this.x > W + this.r) this.x = -this.r;
-      if (this.y < -this.r) this.y = H + this.r; if (this.y > H + this.r) this.y = -this.r;
-    }
-    draw() {
-      const a = this.alpha * (0.7 + 0.3 * Math.sin(this.pulse));
-      const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r);
-      grad.addColorStop(0, GOLD + a + ')'); grad.addColorStop(0.4, GOLD + (a * 0.45) + ')'); grad.addColorStop(1, GOLD + '0)');
-      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
-    }
-  }
+  // Draw gentle, delicate constellation connecting lines
+  function drawConstellations(isLight) {
+    const maxDist = W < 768 ? 90 : 130;
+    const maxDistSq = maxDist * maxDist;
 
-  let gridPulses = [], pulseTimer = 0;
-
-  class GridPulse {
-    constructor() { this.reset(); }
-    reset() {
-      const gs = 64;
-      this.gx = Math.floor(Math.random() * Math.ceil(W / gs)) * gs;
-      this.gy = Math.floor(Math.random() * Math.ceil(H / gs)) * gs;
-      this.r = 0; this.maxR = Math.random() * 100 + 50;
-      this.speed = Math.random() * 1.2 + 0.4;
-      this.alpha = Math.random() * 0.1 + 0.03; this.done = false;
-    }
-    update() { this.r += this.speed; if (this.r > this.maxR) this.done = true; }
-    draw() {
-      const fade = 1 - (this.r / this.maxR);
-      ctx.beginPath(); ctx.arc(this.gx, this.gy, this.r, 0, Math.PI * 2);
-      ctx.strokeStyle = GOLD + (this.alpha * fade) + ')'; ctx.lineWidth = .8; ctx.stroke();
-    }
-  }
-
-  function init() {
-    particles = Array.from({ length: 110 }, () => new Particle());
-    lines = Array.from({ length: 30 }, () => new FlowLine());
-    floatingOrbs = Array.from({ length: 5 }, () => new FloatOrb());
-    gridPulses = [];
-  }
-
-  function drawGrid() {
-    const gs = 64;
-    ctx.strokeStyle = GOLD + '0.028)'; ctx.lineWidth = 0.5;
-    for (let x = 0; x < W; x += gs) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y < H; y += gs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-  }
-
-  function connectParticles() {
     for (let i = 0; i < particles.length; i++) {
+      const p1 = particles[i];
+
       for (let j = i + 1; j < particles.length; j++) {
-        const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 85) {
-          ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.strokeStyle = GOLD + (0.055 * (1 - d / 85)) + ')'; ctx.lineWidth = 0.35; ctx.stroke();
+        const p2 = particles[j];
+        const dx = p1.x - p2.x;
+        const dy = p1.y - p2.y;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < maxDistSq) {
+          const dist = Math.sqrt(distSq);
+          const factor = 1 - dist / maxDist;
+          // Very soft line opacity (0.12 max)
+          const alpha = (!isLight ? 0.14 : 0.10) * factor;
+
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+
+          if (!isLight) {
+            ctx.strokeStyle = (p1.type === 'blue' || p2.type === 'blue')
+              ? `rgba(120, 170, 255, ${alpha * 0.8})`
+              : `rgba(225, 195, 145, ${alpha})`;
+          } else {
+            ctx.strokeStyle = `rgba(160, 120, 40, ${alpha * 0.6})`;
+          }
+
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+
+      // Very soft mouse connection
+      if (mouse.active) {
+        const mdx = p1.x - mouse.x;
+        const mdy = p1.y - mouse.y;
+        const mDistSq = mdx * mdx + mdy * mdy;
+        const mouseConnDist = 120;
+
+        if (mDistSq < mouseConnDist * mouseConnDist) {
+          const mDist = Math.sqrt(mDistSq);
+          const mFactor = 1 - mDist / mouseConnDist;
+          const mAlpha = (!isLight ? 0.22 : 0.15) * mFactor;
+
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(mouse.x, mouse.y);
+          ctx.strokeStyle = (!isLight ? `rgba(240, 215, 175, ${mAlpha})` : `rgba(160, 120, 40, ${mAlpha})`);
+          ctx.lineWidth = 0.55;
+          ctx.stroke();
         }
       }
     }
   }
 
+  // Animation Loop
   function animate() {
     requestAnimationFrame(animate);
+
+    // Smooth mouse follow
+    if (mouse.active) {
+      mouse.x += (mouse.targetX - mouse.x) * 0.15;
+      mouse.y += (mouse.targetY - mouse.y) * 0.15;
+    }
+
+    // Decay scroll velocity smoothly
+    scrollVel *= 0.90;
+
+    // Check current theme
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
+    // Clear canvas
     ctx.clearRect(0, 0, W, H);
-    const vig = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * .7);
-    vig.addColorStop(0, 'rgba(7,7,15,0)'); vig.addColorStop(1, 'rgba(7,7,15,0.5)');
-    ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
-    drawGrid();
-    floatingOrbs.forEach(o => { o.update(); o.draw(); });
-    lines.forEach(l => { l.update(); l.draw(); });
-    connectParticles();
-    particles.forEach(p => { p.update(); p.draw(); });
-    pulseTimer++;
-    if (pulseTimer % 60 === 0) gridPulses.push(new GridPulse());
-    gridPulses = gridPulses.filter(gp => !gp.done);
-    gridPulses.forEach(gp => { gp.update(); gp.draw(); });
+
+    // Atmospheric Deep Cosmic Gradient in Dark Mode
+    if (!isLight) {
+      const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.85);
+      bgGrad.addColorStop(0, '#07070f');
+      bgGrad.addColorStop(0.65, '#05050b');
+      bgGrad.addColorStop(1, '#030307');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Draw constellation connection web & geometric triangles
+    drawConstellations(isLight);
+
+    // Update and draw all stars & radar rings
+    for (let i = 0; i < particles.length; i++) {
+      particles[i].update();
+      particles[i].draw(isLight);
+    }
   }
 
   window.addEventListener('resize', resize);
-  resize(); animate();
+  resize();
+  animate();
 })();
+
